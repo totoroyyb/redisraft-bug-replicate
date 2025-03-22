@@ -111,37 +111,42 @@ long EntryCacheDeleteHead(EntryCache *cache, raft_index_t first_idx)
  * Returns the number of entries removed, or -1 if the specified index is
  * beyond the tail.
  */
-long EntryCacheDeleteTail(EntryCache *cache, raft_index_t index)
-{
-    long deleted = 0;
-    raft_index_t i;
+long EntryCacheDeleteTail(EntryCache *cache, raft_index_t index) {
+  long deleted = 0;
+  raft_index_t i;
 
-    if (index >= cache->start_idx + cache->len) {
-        return -1;
-    }
-    if (index < cache->start_idx) {
-        index = cache->start_idx;
-    }
+  if (index >= cache->start_idx + cache->len) {
+    return -1;
+  }
+  if (index < cache->start_idx) {
+    // This is the bug fixed in `e0123a9` per
+    // https://github.com/RedisLabs/redisraft/commit/e0123a97c751ce578e97fbea47c0ed34066bba1f
+    // We replicate the bug here.
+    return -1;
 
-    for (i = index; i < cache->start_idx + cache->len; i++) {
-        unsigned long int relidx = i - cache->start_idx;
-        unsigned long int ofs = (cache->start + relidx) % cache->size;
-        raft_entry_t *ety = cache->ptrs[ofs];
+    // The line below is the intended fix.
+    // index = cache->start_idx;
+  }
 
-        cache->entries_memsize -= sizeof(raft_entry_t) + ety->data_len;
-        raft_entry_release(ety);
+  for (i = index; i < cache->start_idx + cache->len; i++) {
+    unsigned long int relidx = i - cache->start_idx;
+    unsigned long int ofs = (cache->start + relidx) % cache->size;
+    raft_entry_t *ety = cache->ptrs[ofs];
 
-        cache->ptrs[ofs] = NULL;
-        deleted++;
-    }
+    cache->entries_memsize -= sizeof(raft_entry_t) + ety->data_len;
+    raft_entry_release(ety);
 
-    cache->len -= deleted;
+    cache->ptrs[ofs] = NULL;
+    deleted++;
+  }
 
-    if (!cache->len) {
-        cache->start_idx = 0;
-    }
+  cache->len -= deleted;
 
-    return deleted;
+  if (!cache->len) {
+    cache->start_idx = 0;
+  }
+
+  return deleted;
 }
 
 /* Delete entries up to index `limit` to take memory usage under `max_memory`. */
