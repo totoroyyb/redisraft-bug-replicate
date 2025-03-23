@@ -1,4 +1,0 @@
-smove
-ro
-stdio
-edn
