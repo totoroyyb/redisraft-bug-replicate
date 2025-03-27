@@ -2,7 +2,7 @@ ifeq ($(PREFIX),)
     $(error PREFIX was not specified)
 endif
 
-all:	libuv hiredis raft cmocka
+all:	libuv hiredis raft
 
 clean:
 	-$(MAKE) -C hiredis clean

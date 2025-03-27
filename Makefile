@@ -16,7 +16,7 @@ else
     ARCH_LDFLAGS := -bundle -undefined dynamic_lookup
 endif
 
-CC = gcc
+CC = gcc-9
 CPPFLAGS = -D_POSIX_C_SOURCE=200112L -D_GNU_SOURCE
 ifneq ($(TRACE),)
     CPPFLAGS += -DENABLE_TRACE
