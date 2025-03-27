@@ -30,3 +30,7 @@ buildinfo.h
 build/*
 jepsen/docker/store/*
 tests/tls/*
+
+.cache/
+compile_commands.json
+
