@@ -275,7 +275,7 @@ target_include_directories(redisraft PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/deps/common>)
 target_include_directories(redisraft PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/deps/>)
-target_include_directories(redisraft PRIVATE $ENV{HOME}/.local/include)
+target_include_directories(redisraft PUBLIC $ENV{HOME}/.local/include)
 # ------------------------- Library build end  ------------------------------- #
 
 
@@ -318,11 +318,13 @@ add_executable(main
 
 target_compile_options(main PUBLIC -include unit/dut_premble.h)
 target_link_libraries(main PRIVATE raft hiredis Threads::Threads dl m)
+target_link_libraries(main PRIVATE ${PAHO_LIB})
 if (BUILD_TLS)
   target_link_libraries(main PRIVATE OpenSSL::SSL OpenSSL::Crypto hiredis_ssl)
 endif ()
 
 target_include_directories(main PUBLIC tests deps/raft/include deps/common deps/)
+target_include_directories(main PRIVATE $ENV{HOME}/.local/include)
 
 add_dependencies(main info)
 add_test(NAME main COMMAND $<TARGET_FILE:main>)

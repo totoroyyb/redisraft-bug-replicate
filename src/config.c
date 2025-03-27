@@ -821,7 +821,7 @@ RRStatus ConfigInit(RedisModuleCtx *ctx, RedisRaftConfig *c) {
     ret |= RedisModule_RegisterStringConfig(ctx,  conf_cluster_user,               "default",        REDISMODULE_CONFIG_DEFAULT,                 getString,  setString,  NULL, c);
     ret |= RedisModule_RegisterStringConfig(ctx,  conf_cluster_password,           "",               REDISMODULE_CONFIG_SENSITIVE |
                                                                                                      REDISMODULE_CONFIG_HIDDEN,                  getString,  setString,  NULL, c);
-    ret |= RedisModule_RegisterStringConfig(ctx,  conf_ddb_addr,                   "127.0.0.1",               REDISMODULE_CONFIG_DEFAULT,                 getString,  setString,  NULL, c);
+    ret |= RedisModule_RegisterStringConfig(ctx,  conf_ddb_addr,                   "127.0.0.1",      REDISMODULE_CONFIG_DEFAULT,                 getString,  setString,  NULL, c);
 
                                                    /* name */                  /* default-value */   /* flags */
     ret |= RedisModule_RegisterEnumConfig(ctx,    conf_loglevel,               LOG_LEVEL_NOTICE,     REDISMODULE_CONFIG_DEFAULT,  redisraft_loglevels,   redisraft_loglevel_enums, LOG_LEVEL_COUNT,      getEnum, setEnum, NULL, c);

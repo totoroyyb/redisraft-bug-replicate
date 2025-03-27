@@ -4,6 +4,9 @@
  * the Server Side Public License v1 (SSPLv1).
  */
 
+#include "cddb/common.h"
+#include <cddb/integration.h>
+
 #include "redisraft.h"
 
 #include "entrycache.h"
@@ -16,6 +19,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+
+/* DDB Connector */
+DDBConnector *ddb_connector = NULL;
+DDBMetadata ddb_meta = {0};
 
 RedisModuleCtx *redisraft_log_ctx = NULL;
 
@@ -1745,6 +1752,15 @@ static void handleInfo(RedisModuleInfoCtx *ctx, int for_crash_report)
     RedisModule_InfoAddFieldCString(ctx, "state", getStateStr(rr));
     RedisModule_InfoAddFieldCString(ctx, "role", rr->raft ? raft_get_state_str(rr->raft) : "(none)");
 
+    /* DDB information section */
+    RedisModule_InfoAddSection(ctx, "ddb");
+    if (rr->config.enable_ddb) {
+        RedisModule_InfoAddFieldCString(ctx, "enabled", "yes");
+        RedisModule_InfoAddFieldCString(ctx, "address", rr->config.ddb_addr.host);
+    } else {
+        RedisModule_InfoAddFieldCString(ctx, "enabled", "no");
+    }
+
     char *voting = "-";
     if (rr->raft) {
         voting = raft_node_is_voting(raft_get_my_node(rr->raft)) ? "yes" : "no";
@@ -1774,7 +1790,7 @@ static void handleInfo(RedisModuleInfoCtx *ctx, int for_crash_report)
         RedisModule_InfoAddFieldCString(ctx, "voting", raft_node_is_voting(rn) ? "yes" : "no");
         RedisModule_InfoAddFieldCString(ctx, "addr", n->addr.host);
         RedisModule_InfoAddFieldULongLong(ctx, "port", n->addr.port);
-
+        
         long long int last = -1;
         if (n->conn->last_connected_time) {
             last = (now - n->conn->last_connected_time) / 1000;
@@ -1987,8 +2003,20 @@ RRStatus RedisRaftCtxInit(RedisRaftCtx *rr, RedisModuleCtx *ctx)
 
     rr->client_session_dict = RedisModule_CreateDict(rr->ctx);
 
-
     /* Initialize DDB */
+    if (rr->config.enable_ddb) {
+        LOG_NOTICE("DDB is enabled with address: %s", rr->config.ddb_addr.host);
+        DDBConfig ddb_conf = ddb_config_get_default(rr->config.ddb_addr.host);         
+        char node_id_str[32];
+        snprintf(node_id_str, sizeof(node_id_str), "%d", rr->config.id);
+        ddb_conf = ddb_config_with_alias(&ddb_conf, node_id_str);
+
+        char* conf_str = ddb_config_to_string(&ddb_conf);
+        LOG_NOTICE("DDB config: %s", conf_str);
+        
+        ddb_connector = ddb_connector_create_with_config(ddb_conf);
+        ddb_connector_init(ddb_connector);
+    }
 
     /* Cluster configuration */
     ShardingInfoInit(rr->ctx, &rr->sharding_info);
@@ -2040,6 +2068,12 @@ void RedisRaftCtxClear(RedisRaftCtx *rr)
     if (rr->ctx) {
         RedisModule_FreeThreadSafeContext(rr->ctx);
         rr->ctx = NULL;
+    }
+    
+    /* DDB Cleanup */
+    if (rr->config.enable_ddb && ddb_connector != NULL) {
+        ddb_connector_destroy(ddb_connector);
+        ddb_connector = NULL;
     }
 
     LogTerm(&rr->log);
