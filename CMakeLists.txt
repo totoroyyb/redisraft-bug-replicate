@@ -24,20 +24,25 @@ include(TestBigEndian)
 
 # ----------------------- Build Settings Start ------------------------------- #
 set_property(GLOBAL PROPERTY ALLOW_DUPLICATE_CUSTOM_TARGETS 1)
-set(CMAKE_C_STANDARD 99)
+# set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
+# set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_C_EXTENSIONS ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+find_library(PAHO_LIB paho-mqtt3c PATHS /usr/local/lib REQUIRED)
+message(STATUS "PAHO_LIB = ${PAHO_LIB}")
+
 enable_testing()
 
 if (NOT CMAKE_BUILD_TYPE)
-    message(STATUS "No build type selected, defaulting to Release")
-    set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+  message(STATUS "No build type selected, defaulting to Release")
+  set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 endif ()
 
 message(STATUS "Main build type: ${CMAKE_BUILD_TYPE}")
@@ -45,37 +50,37 @@ message(STATUS "Main build type: ${CMAKE_BUILD_TYPE}")
 # Detect endianness
 test_big_endian(HAVE_BIG_ENDIAN)
 if (${HAVE_BIG_ENDIAN})
-    message(STATUS "System is BIG ENDIAN")
-    target_compile_definitions(${PROJECT_NAME}_test PRIVATE -DHAVE_BIG_ENDIAN)
+  message(STATUS "System is BIG ENDIAN")
+  target_compile_definitions(${PROJECT_NAME}_test PRIVATE -DHAVE_BIG_ENDIAN)
 else ()
-    message(STATUS "System is LITTLE ENDIAN")
+  message(STATUS "System is LITTLE ENDIAN")
 endif ()
 
 message(STATUS "CMAKE_SYSTEM_PROCESSOR is ${CMAKE_SYSTEM_PROCESSOR}")
 
 # Detect architecture and set HAVE_CRC32C flag if supported by the CPU
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
-    message(STATUS "System is x86_64")
+  message(STATUS "System is x86_64")
 
-    # Extra check for sse4.2 support
-    check_c_compiler_flag(-msse4.2 HAVE_CRC32_HARDWARE)
-    if (${HAVE_CRC32_HARDWARE})
-        message(STATUS "CPU have -msse4.2, defined HAVE_CRC32C")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_CRC32C -msse4.2")
-    endif ()
+  # Extra check for sse4.2 support
+  check_c_compiler_flag(-msse4.2 HAVE_CRC32_HARDWARE)
+  if (${HAVE_CRC32_HARDWARE})
+    message(STATUS "CPU have -msse4.2, defined HAVE_CRC32C")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_CRC32C -msse4.2")
+  endif ()
 elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
-    message(STATUS "System is arm64")
+  message(STATUS "System is arm64")
 
-    # Extra check for -march=armv8.1-a
-    check_c_compiler_flag(-march=armv8.1-a HAVE_CRC32_HARDWARE)
-    if (${HAVE_CRC32_HARDWARE})
-        message(STATUS "CPU have -march=armv8.1-a, defined HAVE_CRC32C")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_CRC32C -march=armv8.1-a")
-    endif ()
+  # Extra check for -march=armv8.1-a
+  check_c_compiler_flag(-march=armv8.1-a HAVE_CRC32_HARDWARE)
+  if (${HAVE_CRC32_HARDWARE})
+    message(STATUS "CPU have -march=armv8.1-a, defined HAVE_CRC32C")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_CRC32C -march=armv8.1-a")
+  endif ()
 endif ()
 
 if (NOT HAVE_CRC32_HARDWARE)
-    message(STATUS "CRC32C implementation will use the software version")
+  message(STATUS "CRC32C implementation will use the software version")
 endif ()
 
 
@@ -86,26 +91,26 @@ foreach (compile_flag
         CMAKE_C_FLAGS_RELEASE
         CMAKE_C_FLAGS_RELWITHDEBINFO
         CMAKE_C_FLAGS_MINSIZEREL)
-    string(REPLACE "-DNDEBUG" "" "${compile_flag}" "${${compile_flag}}")
+  string(REPLACE "-DNDEBUG" "" "${compile_flag}" "${${compile_flag}}")
 endforeach ()
 
 if (BUILD_TLS)
-    if (NOT OPENSSL_ROOT_DIR)
-        if (APPLE)
-            set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
-        endif ()
+  if (NOT OPENSSL_ROOT_DIR)
+    if (APPLE)
+      set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
     endif ()
+  endif ()
 
-    find_package(OpenSSL REQUIRED)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_TLS")
+  find_package(OpenSSL REQUIRED)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_TLS")
 endif ()
 
 if (TRACE)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DENABLE_TRACE")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DENABLE_TRACE")
 endif ()
 
 if (NOT PYTEST_OPTS)
-    set(PYTEST_OPTS "-v")
+  set(PYTEST_OPTS "-v")
 endif ()
 # Create a PYTEST_OPTS list by replacing space with semicolon. Otherwise,
 # Cmake thinks it has to escape space and inserts backslash.
@@ -114,21 +119,21 @@ string(REPLACE " " ";" PYTEST_LIST ${PYTEST_OPTS})
 set(CMAKE_SHARED_MODULE_SUFFIX ".so")
 
 if (SANITIZER)
-    if ("${SANITIZER}" STREQUAL "address")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
-        add_link_options(-fsanitize=address)
-    elseif ("${SANITIZER}" STREQUAL "undefined")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
-        add_link_options(-fsanitize=undefined)
-    elseif ("${SANITIZER}" STREQUAL "thread")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
-        add_link_options(-fsanitize=thread)
-    else ()
-        message(FATAL_ERROR "Unknown sanitizer : ${SANITIZER}")
-    endif ()
+  if ("${SANITIZER}" STREQUAL "address")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+    add_link_options(-fsanitize=address)
+  elseif ("${SANITIZER}" STREQUAL "undefined")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
+    add_link_options(-fsanitize=undefined)
+  elseif ("${SANITIZER}" STREQUAL "thread")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
+    add_link_options(-fsanitize=thread)
+  else ()
+    message(FATAL_ERROR "Unknown sanitizer : ${SANITIZER}")
+  endif ()
 
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-sanitize-recover=all -fno-omit-frame-pointer")
-    message(STATUS "Using sanitizer : ${SANITIZER}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-sanitize-recover=all -fno-omit-frame-pointer")
+  message(STATUS "Using sanitizer : ${SANITIZER}")
 endif ()
 
 # ------------------------ Build Settings End -------------------------------- #
@@ -143,22 +148,22 @@ set_property(TARGET raft PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # ------------------------------ hiredis ------------------------------------- #
 if (BUILD_TLS)
-    option(ENABLE_SSL "Building with TLS" ON)
+  option(ENABLE_SSL "Building with TLS" ON)
 endif ()
 option(DISABLE_TESTS "Disable hiredis tests" ON)
 option(BUILD_SHARED_LIBS "Link hiredis static lib" OFF)
 
 # Silence hiredis warnings on MacOS
 if (APPLE)
-    set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> Scr <TARGET> <LINK_FLAGS> <OBJECTS>")
-    set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -no_warning_for_no_symbols -c <TARGET>")
+  set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> Scr <TARGET> <LINK_FLAGS> <OBJECTS>")
+  set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -no_warning_for_no_symbols -c <TARGET>")
 endif()
 
 add_subdirectory(deps/hiredis)
 set_property(TARGET hiredis PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 if (BUILD_TLS)
-    set_property(TARGET hiredis_ssl PROPERTY POSITION_INDEPENDENT_CODE ON)
+  set_property(TARGET hiredis_ssl PROPERTY POSITION_INDEPENDENT_CODE ON)
 endif ()
 
 # Disable warnings for dependencies
@@ -183,8 +188,8 @@ set_property(TARGET info APPEND PROPERTY
 
 # -------------------------- Code Coverage Start ----------------------------- #
 if (${CMAKE_BUILD_TYPE} MATCHES "Coverage")
-    add_compile_options(-fprofile-arcs -ftest-coverage)
-    link_libraries(gcov)
+  add_compile_options(-fprofile-arcs -ftest-coverage)
+  link_libraries(gcov)
 endif ()
 
 add_custom_target(coverage)
@@ -251,16 +256,17 @@ set_property(TARGET redisraft APPEND PROPERTY
 target_compile_options(redisraft PRIVATE -Wall -Werror -Wextra -Wno-unused-parameter)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
-    set(LINKER_FLAGS "-Wl,-Bsymbolic")
+  set(LINKER_FLAGS "-Wl,-Bsymbolic")
 else ()
-    set(LINKER_FLAGS "-Wl,-undefined -Wl,dynamic_lookup")
+  set(LINKER_FLAGS "-Wl,-undefined -Wl,dynamic_lookup")
 endif ()
 
 set_property(TARGET redisraft PROPERTY LINK_FLAGS ${LINKER_FLAGS})
 
 target_link_libraries(redisraft PUBLIC raft hiredis m)
+target_link_libraries(redisraft PRIVATE ${PAHO_LIB})
 if (BUILD_TLS)
-    target_link_libraries(redisraft PUBLIC OpenSSL::SSL OpenSSL::Crypto hiredis_ssl)
+  target_link_libraries(redisraft PUBLIC OpenSSL::SSL OpenSSL::Crypto hiredis_ssl)
 endif ()
 
 target_include_directories(redisraft PUBLIC
@@ -269,6 +275,7 @@ target_include_directories(redisraft PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/deps/common>)
 target_include_directories(redisraft PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/deps/>)
+target_include_directories(redisraft PRIVATE $ENV{HOME}/.local/include)
 # ------------------------- Library build end  ------------------------------- #
 
 
@@ -312,7 +319,7 @@ add_executable(main
 target_compile_options(main PUBLIC -include unit/dut_premble.h)
 target_link_libraries(main PRIVATE raft hiredis Threads::Threads dl m)
 if (BUILD_TLS)
-    target_link_libraries(main PRIVATE OpenSSL::SSL OpenSSL::Crypto hiredis_ssl)
+  target_link_libraries(main PRIVATE OpenSSL::SSL OpenSSL::Crypto hiredis_ssl)
 endif ()
 
 target_include_directories(main PUBLIC tests deps/raft/include deps/common deps/)
@@ -340,13 +347,13 @@ add_dependencies(tests integration-tests unit-tests)
 
 # ---------------------------- Test Modules ---------------------------------- #
 macro(build_test_module name)
-    add_library(${name} MODULE tests/integration/modules/${name}.c)
-    set_target_properties(${name} PROPERTIES PREFIX "")
-    target_include_directories(${name} PUBLIC
+  add_library(${name} MODULE tests/integration/modules/${name}.c)
+  set_target_properties(${name} PROPERTIES PREFIX "")
+  target_include_directories(${name} PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/deps/common/>)
-    set_target_properties(${name} PROPERTIES
+  set_target_properties(${name} PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/tests/integration/modules")
-    set_property(TARGET ${name} APPEND PROPERTY
+  set_property(TARGET ${name} APPEND PROPERTY
             ADDITIONAL_CLEAN_FILES ${LIBRARY_OUTPUT_DIRECTORY}/$<TARGET_FILE_NAME:${name}>)
 endmacro()
 

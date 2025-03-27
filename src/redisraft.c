@@ -1987,6 +1987,9 @@ RRStatus RedisRaftCtxInit(RedisRaftCtx *rr, RedisModuleCtx *ctx)
 
     rr->client_session_dict = RedisModule_CreateDict(rr->ctx);
 
+
+    /* Initialize DDB */
+
     /* Cluster configuration */
     ShardingInfoInit(rr->ctx, &rr->sharding_info);
 

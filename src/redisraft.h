@@ -132,6 +132,11 @@ extern RedisModuleCtx *redisraft_log_ctx;
 /* Longest length of a NodeAddr string, including null terminator */
 #define NODEADDR_MAXLEN (255 + 1 + 5 + 1)
 
+/* DDB Report Addr */
+typedef struct ddb_report_addr {
+    char host[256]; /* Hostname or IP address */
+} DDBReportAddr;
+
 /* Node address specifier. */
 typedef struct node_addr {
     uint16_t port;
@@ -316,6 +321,9 @@ typedef enum {
 
 typedef struct RedisRaftConfig {
     RedisModuleString *str_conf_ref; /* Reference of the last string config that we pass to Redis module API */
+
+    bool enable_ddb; /* Enable DDB support */
+    DDBReportAddr ddb_addr; /* NetAddr report to DDB */
 
     raft_node_id_t id;      /* Local node Id */
     NodeAddr addr;          /* Address of local node, if specified */
